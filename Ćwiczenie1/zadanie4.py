@@ -14,3 +14,16 @@ x = 0
 for i in sieve(100000):
     if i: print(x)
     x = x+1
+    
+    WERSJA 2
+    
+    pierwsze = []
+liczba = 0
+
+while liczba !=100:
+    liczba += 1
+    tab = [i for i in range(1, liczba+1) if liczba % i==0]
+    if len(tab) == 2 : pierwsze.append(liczba)
+    tab.clear()
+
+print(pierwsze)
