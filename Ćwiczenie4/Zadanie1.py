@@ -1,31 +1,21 @@
 import shelve
-import hashlib
-import binascii
-from os import urandom
-
-def generate_salt():
-    salt = urandom(16)
-    with open('salt.bin', 'wb') as file:
-        file.write(salt)
-    return salt
+import bcrypt
 
 def load_salt():
-    with open('salt.bin', 'rb') as file:
-        salt = file.read()
+    with shelve.open('users.db') as db:
+        salt = db.get('salt')
     return salt
 
-def hash_password(password, salt):
-    pwdhash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'), salt, 100000)
-    pwdhash = binascii.hexlify(pwdhash)
-    return pwdhash.decode('ascii')
+def hash_password(password):
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password
 
 def authenticate(login, password):
     with shelve.open('users.db') as db:
         if login in db:
             stored_password = db[login]['password']
-            salt = db[login]['salt']
-            hashed_password = hash_password(password, salt)
-            if hashed_password == stored_password:
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
                 return True
     return False
 
@@ -40,14 +30,17 @@ def authorize(login, password):
     return decorator
 
 def register_user(login, password):
-    salt = generate_salt()
-    hashed_password = hash_password(password, salt)
+    hashed_password = hash_password(password)
     with shelve.open('users.db') as db:
         db[login] = {
-            'password': hashed_password,
-            'salt': salt
+            'password': hashed_password
         }
+        db['salt'] = bcrypt.gensalt()
 
+# Rejestracja użytkownika
+register_user('admin', 'password123')
+
+# Deklaracja funkcji secure_function po rejestracji użytkownika
 @authorize('admin', 'password123')
 def secure_function():
     print("Przyznano dostęp")
