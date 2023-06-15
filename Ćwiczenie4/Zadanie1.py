@@ -3,8 +3,19 @@ import hashlib
 import binascii
 from os import urandom
 
+def generate_salt():
+    salt = urandom(16)
+    with open('salt.bin', 'wb') as file:
+        file.write(salt)
+    return salt
+
+def load_salt():
+    with open('salt.bin', 'rb') as file:
+        salt = file.read()
+    return salt
+
 def hash_password(password, salt):
-    pwdhash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'),salt.encode('ascii'), 100000)
+    pwdhash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'), salt, 100000)
     pwdhash = binascii.hexlify(pwdhash)
     return pwdhash.decode('ascii')
 
@@ -28,7 +39,17 @@ def authorize(login, password):
         return wrapper
     return decorator
 
+def register_user(login, password):
+    salt = generate_salt()
+    hashed_password = hash_password(password, salt)
+    with shelve.open('users.db') as db:
+        db[login] = {
+            'password': hashed_password,
+            'salt': salt
+        }
+
 @authorize('admin', 'password123')
 def secure_function():
     print("Przyznano dostęp")
+
 secure_function()
